@@ -1,0 +1,9 @@
+{
+  "name": "Coachify",
+  "description": "A high-performance multimodal AI mentor that observes your screen and guides you through coding tasks using Gemini Live API.",
+  "requestFramePermissions": [
+    "microphone",
+    "camera",
+    "display-capture"
+  ]
+}
