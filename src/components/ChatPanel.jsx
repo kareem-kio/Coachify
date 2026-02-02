@@ -1,4 +1,6 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
+import ReactMarkdown from "react-markdown";
+import "./ChatPanel.css";
 
 const STATUS_ENUM = {
 	OFFLINE: { label: "OFFLINE", color: "var(--status-offline)" },
@@ -6,16 +8,191 @@ const STATUS_ENUM = {
 	LIVE: { label: "LIVE", color: "var(--status-live)" },
 };
 
+// Helper to generate unique IDs (more robust than Date.now())
+let messageIdCounter = 0;
+const generateId = () => `msg-${Date.now()}-${++messageIdCounter}`;
+
+// Initial message content (createdAt set dynamically in component)
+const INITIAL_MESSAGE_CONTENT = {
+	id: "init-1",
+	role: "assistant",
+	content:
+		"## System Online\nI am ready to assist you. You can speak naturally or type your commands.\n\n- Real-time transcription\n- Live code generation\n- Context-aware assistance",
+};
+
 export default function ChatPanel({ sessionActive }) {
+	// State
 	const [activeTab, setActiveTab] = useState("chat");
-	const [currentStatus, setCurrentStatus] = useState("LIVE"); // Mocking status
+	const [currentStatus, setCurrentStatus] = useState("LIVE");
+	const [messages, setMessages] = useState(() => [
+		// Initialize with dynamic timestamp
+		{ ...INITIAL_MESSAGE_CONTENT, createdAt: new Date().toISOString() },
+	]);
+	const [inputText, setInputText] = useState("");
+	const [isTyping, setIsTyping] = useState(false);
+
+	// Refs (grouped at top for clarity)
+	const messagesEndRef = useRef(null);
+	const typingIntervalRef = useRef(null);
+	const aiTimeoutRef = useRef(null); // Track pending AI response timeout
+
+	// Cleanup interval and timeout on unmount to prevent memory leaks
+	useEffect(() => {
+		return () => {
+			if (typingIntervalRef.current) {
+				clearInterval(typingIntervalRef.current);
+			}
+			if (aiTimeoutRef.current) {
+				clearTimeout(aiTimeoutRef.current);
+			}
+		};
+	}, []);
+
+	// Auto-scroll on new messages
+	useEffect(() => {
+		messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+	}, [messages]);
 
 	const toggleStatus = () => {
-		// Cycle statuses for demo
 		const keys = Object.keys(STATUS_ENUM);
 		const currentIndex = keys.indexOf(currentStatus);
 		const nextIndex = (currentIndex + 1) % keys.length;
 		setCurrentStatus(keys[nextIndex]);
+	};
+
+	// Helper to clear any active typing interval AND pending AI timeout
+	const stopTyping = () => {
+		if (typingIntervalRef.current) {
+			clearInterval(typingIntervalRef.current);
+			typingIntervalRef.current = null;
+		}
+		if (aiTimeoutRef.current) {
+			clearTimeout(aiTimeoutRef.current);
+			aiTimeoutRef.current = null;
+		}
+		setIsTyping(false);
+	};
+
+	const streamText = (text, role, onComplete) => {
+		setIsTyping(true);
+
+		let currentText = "";
+		const chars = text.split(""); // Character-based streaming
+		let i = 0;
+		const streamId = generateId(); // Robust ID generation
+		const startTime = new Date().toISOString();
+
+		// Initialize message
+		setMessages((prev) => [
+			...prev,
+			{
+				id: streamId,
+				role: role,
+				content: "",
+				createdAt: startTime,
+			},
+		]);
+
+		typingIntervalRef.current = setInterval(() => {
+			if (i < chars.length) {
+				currentText += chars[i];
+				setMessages((prev) =>
+					prev.map((msg) =>
+						msg.id === streamId
+							? { ...msg, content: currentText }
+							: msg,
+					),
+				);
+				i++;
+			} else {
+				stopTyping();
+				if (onComplete) onComplete();
+			}
+		}, 70); // Character typing speed
+	};
+
+	const handleSendMessage = (e) => {
+		e?.preventDefault();
+		if (!inputText.trim()) return;
+
+		const textToSend = inputText;
+		setInputText(""); // Clear input immediately
+
+		// Interruption Logic: Stop any active typing AND pending AI timeout
+		stopTyping();
+
+		// User Streaming: stream user text
+		streamText(textToSend, "user", () => {
+			// On User Complete: Trigger AI Response (store timeout ID)
+			aiTimeoutRef.current = setTimeout(() => {
+				const response =
+					"### Received\nI have processed your request: **" +
+					textToSend +
+					"**.\n\nHere is how I can help:\n1. Analyze the context\n2. Provide real-time feedback\n3. Suggest improvements";
+				streamText(response, "assistant");
+			}, 500);
+		});
+	};
+
+	const formatTime = (isoString) => {
+		if (!isoString) return "";
+		const date = new Date(isoString);
+		return date.toLocaleTimeString([], {
+			hour: "2-digit",
+			minute: "2-digit",
+		});
+	};
+
+	const formatDateGroup = (isoString) => {
+		if (!isoString) return "";
+		const date = new Date(isoString);
+		const today = new Date();
+		const yesterday = new Date();
+		yesterday.setDate(today.getDate() - 1);
+
+		if (date.toDateString() === today.toDateString()) {
+			return "Today";
+		} else if (date.toDateString() === yesterday.toDateString()) {
+			return "Yesterday";
+		} else {
+			return date.toLocaleDateString();
+		}
+	};
+
+	const renderMessagesWithDates = () => {
+		const elements = [];
+		let lastDate = null;
+
+		messages.forEach((msg) => {
+			const msgDate = msg.createdAt
+				? formatDateGroup(msg.createdAt)
+				: null;
+
+			if (msgDate && msgDate !== lastDate) {
+				elements.push(
+					<div key={`date-${msgDate}`} className="date-divider">
+						<span>{msgDate}</span>
+					</div>,
+				);
+				lastDate = msgDate;
+			}
+
+			elements.push(
+				<div key={msg.id} className={`message-row ${msg.role}`}>
+					<div className="message-bubble">
+						{msg.role === "assistant" ? (
+							<ReactMarkdown>{msg.content}</ReactMarkdown>
+						) : (
+							msg.content
+						)}
+						<span className="timestamp">
+							{formatTime(msg.createdAt)}
+						</span>
+					</div>
+				</div>,
+			);
+		});
+		return elements;
 	};
 
 	const statusConfig = STATUS_ENUM[currentStatus];
@@ -57,8 +234,12 @@ export default function ChatPanel({ sessionActive }) {
 			{/* Content Area */}
 			<div className="content-area">
 				{activeTab === "chat" ? (
-					<div className="empty-state">
-						<p>Speak or start coding to begin...</p>
+					<div className="messages-list">
+						{renderMessagesWithDates()}
+						{isTyping && (
+							<div className="typing-indicator">...</div>
+						)}
+						<div ref={messagesEndRef} />
 					</div>
 				) : (
 					<div className="code-vault">
@@ -69,9 +250,18 @@ export default function ChatPanel({ sessionActive }) {
 
 			{/* Input Area */}
 			<div className="input-area">
-				<div className="input-bar">
-					<input type="text" placeholder="Enter Text Here" />
-					<button className="mic-btn">
+				<form className="input-bar" onSubmit={handleSendMessage}>
+					<input
+						type="text"
+						placeholder={
+							isTyping
+								? "Type to interrupt..."
+								: "Enter Text Here"
+						}
+						value={inputText}
+						onChange={(e) => setInputText(e.target.value)}
+					/>
+					<button type="submit" className="mic-btn">
 						<svg
 							width="20"
 							height="20"
@@ -88,138 +278,8 @@ export default function ChatPanel({ sessionActive }) {
 							<line x1="8" y1="23" x2="16" y2="23"></line>
 						</svg>
 					</button>
-				</div>
+				</form>
 			</div>
-
-			<style jsx="true">{`
-				.chat-panel {
-					background: var(--bg-panel);
-					border: 1px solid var(--border-subtle);
-					border-radius: var(--radius-lg);
-					height: 100%;
-					display: flex;
-					flex-direction: column;
-					overflow: hidden;
-				}
-
-				.chat-header {
-					padding: 1rem 1.5rem;
-					display: flex;
-					justify-content: space-between;
-					align-items: center;
-					border-bottom: 1px solid var(--border-subtle);
-				}
-
-				.status-pill {
-					display: flex;
-					align-items: center;
-					gap: 0.5rem;
-					background: rgba(0, 0, 0, 0.2);
-					padding: 0.25rem 0.75rem;
-					border-radius: 20px;
-					cursor: pointer;
-					border: 1px solid var(--border-subtle);
-				}
-
-				.status-dot {
-					width: 8px;
-					height: 8px;
-					border-radius: 50%;
-					background-color: var(--status-color);
-					box-shadow: 0 0 8px var(--status-color);
-				}
-
-				.status-text {
-					font-size: 0.75rem;
-					font-weight: 600;
-					letter-spacing: 0.05em;
-					color: var(--status-color);
-				}
-
-				.end-btn {
-					background: #52525b;
-					color: white;
-					font-size: 0.8rem;
-					padding: 0.35rem 0.85rem;
-					border-radius: var(--radius-md);
-					font-weight: 600;
-				}
-
-				.end-btn:disabled {
-					background: var(--bg-highlight);
-					color: var(--text-dim);
-					cursor: not-allowed;
-					opacity: 0.5;
-				}
-
-				.tabs-container {
-					display: flex;
-					border-bottom: 1px solid var(--border-subtle);
-				}
-
-				.tab-btn {
-					flex: 1;
-					padding: 1rem;
-					background: var(--bg-surface);
-					color: var(--text-muted);
-					font-weight: 500;
-					transition: all 0.2s;
-					border-bottom: 2px solid transparent;
-				}
-
-				.tab-btn:hover {
-					color: var(--text-main);
-				}
-
-				.tab-btn.selected {
-					/* Darker gradient as requested */
-					background: linear-gradient(
-						180deg,
-						var(--bg-highlight) 0%,
-						var(--bg-panel) 100%
-					);
-					color: var(--primary);
-					border-bottom-color: var(--primary);
-				}
-
-				.content-area {
-					flex: 1;
-					padding: 2rem;
-					display: flex;
-					align-items: center;
-					justify-content: center;
-					color: var(--text-dim);
-				}
-
-				.input-area {
-					padding: 1.5rem;
-					border-top: 1px solid var(--border-subtle);
-				}
-
-				.input-bar {
-					background: var(--bg-highlight);
-					border-radius: 24px;
-					padding: 0.75rem 1.25rem;
-					display: flex;
-					align-items: center;
-					gap: 1rem;
-				}
-
-				.input-bar input {
-					flex: 1;
-					font-size: 0.95rem;
-				}
-
-				.mic-btn {
-					color: var(--text-main);
-					opacity: 0.7;
-					transition: opacity 0.2s;
-				}
-
-				.mic-btn:hover {
-					opacity: 1;
-				}
-			`}</style>
 		</div>
 	);
 }
