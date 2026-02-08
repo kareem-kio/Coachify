@@ -38,9 +38,9 @@ export const ContextPanel: React.FC<ContextPanelProps> = ({ userGoal, onGoalChan
     }
     return (
       <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-4">
-          <CameraIcon className="w-16 h-16 text-slate-400 dark:text-slate-600 mb-4" />
-          <p className="font-semibold text-slate-500 dark:text-slate-400">Screen Share Inactive</p>
-          <p className="text-sm text-slate-600 dark:text-slate-500">Click "Share Screen" below to begin.</p>
+        <CameraIcon className="w-16 h-16 text-slate-400 dark:text-slate-600 mb-4" />
+        <p className="font-semibold text-slate-500 dark:text-slate-400">Screen Share Inactive</p>
+        <p className="text-sm text-slate-600 dark:text-slate-500">Click "Share Screen" below to begin.</p>
       </div>
     );
   }
@@ -49,29 +49,29 @@ export const ContextPanel: React.FC<ContextPanelProps> = ({ userGoal, onGoalChan
     <div className="flex flex-col space-y-6">
       <Section title="Live Screen" icon={<CodeIcon className="h-5 w-5" />}>
         <div className="aspect-video bg-slate-200 dark:bg-slate-900 rounded-md overflow-hidden border border-slate-300 dark:border-slate-600 flex items-center justify-center relative transition-colors duration-200">
-            {screenCapture ? (
-                <img 
-                  src={screenCapture} 
-                  alt="User's shared screen" 
-                  className="object-contain w-full h-full"
-                />
-            ) : (
-                <div className="w-full h-full bg-black/5 dark:bg-black/20">
-                    {getPlaceholder()}
-                </div>
-            )}
+          {screenCapture ? (
+            <img
+              src={screenCapture}
+              alt="User's shared screen"
+              className="object-contain w-full h-full"
+            />
+          ) : (
+            <div className="w-full h-full bg-black/5 dark:bg-black/20">
+              {getPlaceholder()}
+            </div>
+          )}
         </div>
-      </section>
-      
+      </Section>
+
       <Section title="User Goal" icon={<TargetIcon className="h-5 w-5" />}>
-         <textarea
-            value={userGoal}
-            onChange={(e) => onGoalChange(e.target.value)}
-            disabled={isSessionActive}
-            className="w-full h-24 p-2 bg-slate-100 dark:bg-slate-900/50 rounded-md text-cyan-600 dark:text-cyan-400 font-medium border border-slate-300 dark:border-slate-600 focus:ring-2 focus:ring-cyan-500 focus:outline-none transition disabled:opacity-70 disabled:cursor-not-allowed"
-            placeholder="Write your goal here..."
-         />
-      </section>
+        <textarea
+          value={userGoal}
+          onChange={(e) => onGoalChange(e.target.value)}
+          disabled={isSessionActive}
+          className="w-full h-24 p-2 bg-slate-100 dark:bg-slate-900/50 rounded-md text-cyan-600 dark:text-cyan-400 font-medium border border-slate-300 dark:border-slate-600 focus:ring-2 focus:ring-cyan-500 focus:outline-none transition disabled:opacity-70 disabled:cursor-not-allowed"
+          placeholder="Write your goal here..."
+        />
+      </Section>
     </div>
   );
 };
