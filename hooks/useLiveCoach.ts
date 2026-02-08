@@ -24,21 +24,29 @@ const getSystemInstruction = (userGoal: string) => `You are Coachify, an AI codi
 
 
 const CODE_GENERATION_TRIGGERS = [
-    'code_request_confirmed'
+  'code_request_confirmed'
 ];
 
 const parseCoachTranscript = (fullTranscript: string): string => {
+  let cleaned = fullTranscript;
+
+  // Remove control sequences
   const ctrlSequenceRegex = /<ctrl\d+>/;
-  const match = fullTranscript.match(ctrlSequenceRegex);
+  const match = cleaned.match(ctrlSequenceRegex);
   if (match && match.index !== undefined) {
-    return fullTranscript.substring(match.index + match[0].length);
+    cleaned = cleaned.substring(match.index + match[0].length);
   }
 
-  if (fullTranscript.toLowerCase().trim().startsWith('thought')) {
+  // Remove internal thought blocks
+  if (cleaned.toLowerCase().trim().startsWith('thought')) {
     return '';
   }
 
-  return fullTranscript;
+  // Remove the hidden trigger phrases used for code generation
+  // This removes "CODE_REQUEST_CONFIRMED" with optional surrounding commas/whitespace
+  cleaned = cleaned.replace(/,?\s*CODE_REQUEST_CONFIRMED,?\s*/gi, ' ');
+
+  return cleaned.trim();
 };
 
 export const useLiveCoach = () => {
@@ -77,7 +85,7 @@ export const useLiveCoach = () => {
   useEffect(() => {
     isMutedRef.current = isMuted;
   }, [isMuted]);
-  
+
   const stopScreenShare = useCallback(() => {
     if (screenStreamRef.current) {
       screenStreamRef.current.getTracks().forEach(track => track.stop());
@@ -94,35 +102,35 @@ export const useLiveCoach = () => {
 
     scriptProcessorRef.current?.disconnect();
     mediaStreamSourceRef.current?.disconnect();
-    
+
     if (inputAudioContextRef.current && inputAudioContextRef.current.state !== 'closed') {
       inputAudioContextRef.current.close();
     }
     if (outputAudioContextRef.current && outputAudioContextRef.current.state !== 'closed') {
       outputAudioContextRef.current.close();
     }
-    
+
     mediaStreamRef.current?.getTracks().forEach(track => track.stop());
-    
+
     audioSourcesRef.current.forEach(source => source.stop());
     audioSourcesRef.current.clear();
 
     stopScreenShare();
-    
+
     setSessionState(SessionState.IDLE);
     setScreenCapture(null);
     nextStartTimeRef.current = 0;
   }, [stopScreenShare]);
-  
+
   const fetchCodeSnippet = useCallback(async (userPrompt: string) => {
-      if (isFetchingCodeRef.current || !userPrompt.trim()) return;
-      isFetchingCodeRef.current = true;
-      setIsGeneratingCode(true);
-      
-      const goal = userGoalRef.current;
-      console.log(`[fetchCodeSnippet] Triggered for prompt: "${userPrompt}" with goal: "${goal}"`);
-      
-      const codeGenPrompt = `You are an expert code generation assistant. The user is learning to code with an AI mentor.
+    if (isFetchingCodeRef.current || !userPrompt.trim()) return;
+    isFetchingCodeRef.current = true;
+    setIsGeneratingCode(true);
+
+    const goal = userGoalRef.current;
+    console.log(`[fetchCodeSnippet] Triggered for prompt: "${userPrompt}" with goal: "${goal}"`);
+
+    const codeGenPrompt = `You are an expert code generation assistant. The user is learning to code with an AI mentor.
 Their overall goal is: "${goal}".
 Their immediate request is: "${userPrompt}".
 
@@ -132,32 +140,32 @@ Generate a clean, well-commented, and educational code snippet that directly add
 - If appropriate, add a single TODO comment to suggest a next step or an improvement.
 - Provide only the raw code inside a single markdown block. Do not add any extra explanation before or after the code block.`;
 
-      try {
-        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-        const response = await ai.models.generateContent({
-            model: 'gemini-3-flash-preview',
-            contents: codeGenPrompt,
-        });
-        
-        const codeText = response.text;
-        if (codeText) {
-             console.debug('[fetchCodeSnippet] Code snippet received');
-             setCodeHistory(prev => [...prev, {
-                userPrompt: userPrompt.trim(),
-                code: codeText,
-                timestamp: new Date(),
-            }]);
-        } else {
-            console.error('[fetchCodeSnippet] Received an empty code response');
-        }
+    try {
+      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+      const response = await ai.models.generateContent({
+        model: 'gemini-3-flash-preview',
+        contents: codeGenPrompt,
+      });
 
-      } catch (err: any) {
-          console.error('[fetchCodeSnippet] Error fetching code snippet:', err);
-          setError(`Code generation failed: ${err.message}`);
-      } finally {
-          isFetchingCodeRef.current = false;
-          setIsGeneratingCode(false);
+      const codeText = response.text;
+      if (codeText) {
+        console.debug('[fetchCodeSnippet] Code snippet received');
+        setCodeHistory(prev => [...prev, {
+          userPrompt: userPrompt.trim(),
+          code: codeText,
+          timestamp: new Date(),
+        }]);
+      } else {
+        console.error('[fetchCodeSnippet] Received an empty code response');
       }
+
+    } catch (err: any) {
+      console.error('[fetchCodeSnippet] Error fetching code snippet:', err);
+      setError(`Code generation failed: ${err.message}`);
+    } finally {
+      isFetchingCodeRef.current = false;
+      setIsGeneratingCode(false);
+    }
   }, []);
 
   const captureAndSendFrame = useCallback(async () => {
@@ -179,12 +187,12 @@ Generate a clean, well-commented, and educational code snippet that directly add
       setScreenCapture(dataUrl);
 
       const base64Data = dataUrl.split(',')[1];
-      
+
       const imageBlob: Blob = {
         data: base64Data,
         mimeType: 'image/jpeg',
       };
-      
+
       sessionRef.current.sendRealtimeInput({ media: imageBlob });
     } catch (err) {
       console.error("Error capturing and sending frame:", err);
@@ -228,9 +236,9 @@ Generate a clean, well-commented, and educational code snippet that directly add
         throw new Error("API_KEY environment variable not set.");
       }
       const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-      
+
       mediaStreamRef.current = await navigator.mediaDevices.getUserMedia({ audio: true });
-      
+
       inputAudioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 16000 });
       outputAudioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 24000 });
 
@@ -248,7 +256,7 @@ Generate a clean, well-commented, and educational code snippet that directly add
         callbacks: {
           onopen: () => {
             setSessionState(SessionState.ACTIVE);
-            
+
             mediaStreamSourceRef.current = inputAudioContextRef.current!.createMediaStreamSource(mediaStreamRef.current!);
             scriptProcessorRef.current = inputAudioContextRef.current!.createScriptProcessor(4096, 1, 1);
 
@@ -256,7 +264,7 @@ Generate a clean, well-commented, and educational code snippet that directly add
               if (isMutedRef.current) {
                 return;
               }
-              
+
               const inputData = audioProcessingEvent.inputBuffer.getChannelData(0);
               let sum = 0.0;
               for (let i = 0; i < inputData.length; i++) {
@@ -271,8 +279,8 @@ Generate a clean, well-commented, and educational code snippet that directly add
               }
 
               const pcmBlob: Blob = {
-                  data: encode(new Uint8Array(new Int16Array(inputData.map(v => v * 32768)).buffer)),
-                  mimeType: 'audio/pcm;rate=16000',
+                data: encode(new Uint8Array(new Int16Array(inputData.map(v => v * 32768)).buffer)),
+                mimeType: 'audio/pcm;rate=16000',
               };
               sessionPromise.then((session) => {
                 session.sendRealtimeInput({ media: pcmBlob });
@@ -291,7 +299,7 @@ Generate a clean, well-commented, and educational code snippet that directly add
               const text = message.serverContent.inputTranscription.text;
               currentUserTurnText.current += text;
               lastUserPromptRef.current += text;
-              
+
               setChatHistory(prev => {
                 const last = prev[prev.length - 1];
                 if (last?.sender === 'user') {
@@ -302,19 +310,19 @@ Generate a clean, well-commented, and educational code snippet that directly add
                 return [...prev, { sender: 'user', text, timestamp: new Date() }];
               });
             }
-            
+
             if (message.serverContent?.outputTranscription) {
               const text = message.serverContent.outputTranscription.text;
               currentCoachTurnText.current += text;
               isNewUserTurnRef.current = true;
-              
+
               const fullTranscript = currentCoachTurnText.current;
               const displayableText = parseCoachTranscript(fullTranscript);
 
               // Check for code generation trigger
               const fullTextLower = fullTranscript.toLowerCase();
               const shouldGenerateCode = CODE_GENERATION_TRIGGERS.some(trigger => fullTextLower.includes(trigger));
-              
+
               if (shouldGenerateCode && !codeGenerationTriggeredRef.current && lastUserPromptRef.current.trim()) {
                 codeGenerationTriggeredRef.current = true;
                 fetchCodeSnippet(lastUserPromptRef.current);
@@ -328,7 +336,7 @@ Generate a clean, well-commented, and educational code snippet that directly add
                   return newHistory;
                 }
                 if (displayableText.trim()) {
-                    return [...prev, { sender: 'coach', text: displayableText, timestamp: new Date() }];
+                  return [...prev, { sender: 'coach', text: displayableText, timestamp: new Date() }];
                 }
                 return prev;
               });
@@ -355,22 +363,22 @@ Generate a clean, well-commented, and educational code snippet that directly add
             if (base64Audio && outputAudioContextRef.current) {
               const audioCtx = outputAudioContextRef.current;
               nextStartTimeRef.current = Math.max(nextStartTimeRef.current, audioCtx.currentTime);
-              
+
               const audioBuffer = await decodeAudioData(decode(base64Audio), audioCtx, 24000, 1);
-              
+
               const source = audioCtx.createBufferSource();
               source.buffer = audioBuffer;
               source.connect(audioCtx.destination);
-              
+
               source.addEventListener('ended', () => {
                 audioSourcesRef.current.delete(source);
               });
-              
+
               source.start(nextStartTimeRef.current);
               nextStartTimeRef.current += audioBuffer.duration;
               audioSourcesRef.current.add(source);
             }
-            
+
             const interrupted = message.serverContent?.interrupted;
             if (interrupted) {
               for (const source of audioSourcesRef.current.values()) {
