@@ -1,17 +1,17 @@
-
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Coachify</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-      // This is the crucial configuration that enables class-based dark mode
-      tailwind.config = {
-        darkMode: 'class',
-      }
-    </script>
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Coachify</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    // This is the crucial configuration that enables class-based dark mode
+    tailwind.config = {
+      darkMode: 'class',
+    }
+  </script>
   <script type="importmap">
 {
   "imports": {
@@ -22,41 +22,52 @@
   }
 }
 </script>
-    <script>
-      // Avoids a flash of the wrong theme
-      if (localStorage.getItem('theme') === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
-        document.documentElement.classList.add('dark');
-      } else {
-        document.documentElement.classList.remove('dark');
-      }
-    </script>
-    <style>
-      /* Custom scrollbar for webkit browsers */
-      ::-webkit-scrollbar {
-        width: 8px;
-        height: 8px;
-      }
-      ::-webkit-scrollbar-track {
-        background: transparent;
-      }
-      ::-webkit-scrollbar-thumb {
-        background: #cbd5e1; /* slate-300 */
-        border-radius: 4px;
-      }
-      .dark ::-webkit-scrollbar-thumb {
-        background: #475569; /* slate-600 */
-      }
-      ::-webkit-scrollbar-thumb:hover {
-        background: #94a3b8; /* slate-400 */
-      }
-      .dark ::-webkit-scrollbar-thumb:hover {
-        background: #64748b; /* slate-500 */
-      }
-    </style>
-<link rel="stylesheet" href="/index.css">
+  <script>
+    // Avoids a flash of the wrong theme
+    if (localStorage.getItem('theme') === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  </script>
+  <style>
+    /* Custom scrollbar for webkit browsers */
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      /* slate-300 */
+      border-radius: 4px;
+    }
+
+    .dark ::-webkit-scrollbar-thumb {
+      background: #475569;
+      /* slate-600 */
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: #94a3b8;
+      /* slate-400 */
+    }
+
+    .dark ::-webkit-scrollbar-thumb:hover {
+      background: #64748b;
+      /* slate-500 */
+    }
+  </style>
+
 </head>
-  <body class="bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-200">
-    <div id="root"></div>
-    <script type="module" src="/index.tsx"></script>
-  </body>
+
+<body class="bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-200">
+  <div id="root"></div>
+  <script type="module" src="/index.tsx"></script>
+</body>
+
 </html>
