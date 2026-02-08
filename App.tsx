@@ -45,8 +45,8 @@ function App() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-200 font-sans flex flex-col transition-colors duration-300">
-      <header className="bg-white/80 dark:bg-slate-800/50 backdrop-blur-sm border-b border-slate-200 dark:border-slate-700 p-4 shadow-lg sticky top-0 z-10 flex justify-between items-center">
+    <div className="h-screen bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-200 font-sans flex flex-col transition-colors duration-300 overflow-hidden">
+      <header className="flex-shrink-0 bg-white/80 dark:bg-slate-800/50 backdrop-blur-sm border-b border-slate-200 dark:border-slate-700 p-4 shadow-lg z-10 flex justify-between items-center">
         <div className="w-8"></div> {/* Spacer */}
         <div className="flex items-center">
           <img
@@ -61,7 +61,7 @@ function App() {
         </button>
       </header>
 
-      <main className="flex-grow container mx-auto p-4 md:p-8 grid grid-cols-1 lg:grid-cols-2 gap-8">
+      <main className="flex-grow container mx-auto p-4 md:p-8 grid grid-cols-1 lg:grid-cols-2 gap-8 overflow-y-auto">
         <ChatPanel
           sessionState={sessionState}
           history={chatHistory}
@@ -78,7 +78,7 @@ function App() {
         />
       </main>
 
-      <footer className="sticky bottom-0 bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm border-t border-slate-200 dark:border-slate-700 py-4 px-4 md:px-8">
+      <footer className="flex-shrink-0 bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm border-t border-slate-200 dark:border-slate-700 py-4 px-4 md:px-8">
         <ControlBar
           sessionState={sessionState}
           onStart={handleStartSession}

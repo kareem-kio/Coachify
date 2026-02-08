@@ -24,7 +24,7 @@ const StatusIndicator: React.FC<{ sessionState: SessionState; isGeneratingCode: 
       </div>
     );
   }
-  
+
   switch (sessionState) {
     case SessionState.CONNECTING:
       return (
@@ -62,13 +62,22 @@ const StatusIndicator: React.FC<{ sessionState: SessionState; isGeneratingCode: 
 
 const ChatView: React.FC<{ history: ChatMessage[] }> = ({ history }) => {
   const chatEndRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    // Only auto-scroll if user is near the bottom (within 150px)
+    // Use scrollTop instead of scrollIntoView to avoid scrolling parent containers
+    const container = containerRef.current;
+    if (container && history.length > 0) {
+      const isNearBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 150;
+      if (isNearBottom) {
+        container.scrollTop = container.scrollHeight;
+      }
+    }
   }, [history]);
 
   return (
-    <div className="flex-grow bg-slate-100/50 dark:bg-slate-900/50 rounded-md p-4 overflow-y-auto border border-slate-200 dark:border-slate-700 space-y-4 transition-colors duration-200">
+    <div ref={containerRef} className="flex-grow bg-slate-100/50 dark:bg-slate-900/50 rounded-md p-4 overflow-y-auto border border-slate-200 dark:border-slate-700 space-y-4 transition-colors duration-200">
       {history.length === 0 ? (
         <div className="flex items-center justify-center h-full text-slate-400 dark:text-slate-500">
           <p>Start the session to begin the conversation...</p>
@@ -86,11 +95,10 @@ const ChatView: React.FC<{ history: ChatMessage[] }> = ({ history }) => {
                 </span>
               </div>
               <div
-                className={`rounded-lg px-4 py-2 whitespace-pre-wrap transition-colors duration-200 ${
-                  msg.sender === 'user'
-                    ? 'bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-slate-200 rounded-bl-none'
-                    : 'bg-cyan-100/50 dark:bg-cyan-900/50 text-cyan-900 dark:text-cyan-100 rounded-br-none'
-                }`}
+                className={`rounded-lg px-4 py-2 whitespace-pre-wrap transition-colors duration-200 ${msg.sender === 'user'
+                  ? 'bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-slate-200 rounded-bl-none'
+                  : 'bg-cyan-100/50 dark:bg-cyan-900/50 text-cyan-900 dark:text-cyan-100 rounded-br-none'
+                  }`}
               >
                 <span>{msg.text}</span>
               </div>
@@ -105,13 +113,22 @@ const ChatView: React.FC<{ history: ChatMessage[] }> = ({ history }) => {
 
 const CodeView: React.FC<{ codeHistory: CodeSnippet[] }> = ({ codeHistory }) => {
   const codeEndRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    codeEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    // Only auto-scroll if user is near the bottom (within 150px)
+    // Use scrollTop instead of scrollIntoView to avoid scrolling parent containers
+    const container = containerRef.current;
+    if (container && codeHistory.length > 0) {
+      const isNearBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 150;
+      if (isNearBottom) {
+        container.scrollTop = container.scrollHeight;
+      }
+    }
   }, [codeHistory]);
-  
+
   return (
-    <div className="flex-grow bg-slate-100/50 dark:bg-slate-900/50 rounded-md p-4 overflow-y-auto border border-slate-200 dark:border-slate-700 space-y-6 transition-colors duration-200">
+    <div ref={containerRef} className="flex-grow bg-slate-100/50 dark:bg-slate-900/50 rounded-md p-4 overflow-y-auto border border-slate-200 dark:border-slate-700 space-y-6 transition-colors duration-200">
       {codeHistory.length === 0 ? (
         <div className="flex items-center justify-center h-full text-slate-400 dark:text-slate-500">
           <p>Code snippets from the coach will appear here.</p>
@@ -136,25 +153,25 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ sessionState, history, cod
   const [activeTab, setActiveTab] = useState<'chat' | 'code'>('chat');
 
   return (
-    <div className="bg-white dark:bg-slate-800 rounded-lg shadow-2xl p-6 flex flex-col h-[70vh] max-h-[700px] transition-colors duration-200">
+    <div className="bg-white dark:bg-slate-800 rounded-lg shadow-2xl p-6 flex flex-col h-[50vh] lg:h-[70vh] max-h-[700px] transition-colors duration-200">
       <div className="flex justify-between items-center mb-4">
         <div className="flex border-b border-slate-200 dark:border-slate-700 transition-colors duration-200">
-            <button 
-                onClick={() => setActiveTab('chat')}
-                className={`flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors ${activeTab === 'chat' ? 'border-b-2 border-cyan-500 dark:border-cyan-400 text-cyan-600 dark:text-cyan-300' : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'}`}
-            >
-                <MicIcon className="h-4 w-4" /> Chat
-            </button>
-            <button 
-                onClick={() => setActiveTab('code')}
-                className={`flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors ${activeTab === 'code' ? 'border-b-2 border-cyan-500 dark:border-cyan-400 text-cyan-600 dark:text-cyan-300' : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'}`}
-            >
-                <CodeIcon className="h-4 w-4" /> Code
-            </button>
+          <button
+            onClick={() => setActiveTab('chat')}
+            className={`flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors ${activeTab === 'chat' ? 'border-b-2 border-cyan-500 dark:border-cyan-400 text-cyan-600 dark:text-cyan-300' : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'}`}
+          >
+            <MicIcon className="h-4 w-4" /> Chat
+          </button>
+          <button
+            onClick={() => setActiveTab('code')}
+            className={`flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors ${activeTab === 'code' ? 'border-b-2 border-cyan-500 dark:border-cyan-400 text-cyan-600 dark:text-cyan-300' : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'}`}
+          >
+            <CodeIcon className="h-4 w-4" /> Code
+          </button>
         </div>
         <StatusIndicator sessionState={sessionState} isGeneratingCode={isGeneratingCode} />
       </div>
-      
+
       {error ? (
         <div className="text-red-500 dark:text-red-400 flex flex-col items-center justify-center h-full">
           <AlertTriangleIcon className="w-12 h-12 mb-4" />
