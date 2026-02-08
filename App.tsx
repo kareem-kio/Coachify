@@ -48,9 +48,14 @@ function App() {
     <div className="min-h-screen bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-200 font-sans flex flex-col transition-colors duration-300">
       <header className="bg-white/80 dark:bg-slate-800/50 backdrop-blur-sm border-b border-slate-200 dark:border-slate-700 p-4 shadow-lg sticky top-0 z-10 flex justify-between items-center">
         <div className="w-8"></div> {/* Spacer */}
-        <h1 className="text-2xl font-bold text-center text-cyan-500 dark:text-cyan-400 tracking-wider">
-          Coachify
-        </h1>
+        <div className="flex items-center">
+          <img
+            src="/logo.png"
+            alt="C"
+            className="h-10 object-contain"
+          />
+          <span className="text-2xl font-bold tracking-wide ml-0.1" style={{ backgroundImage: 'linear-gradient(to right, #0f2d5d, #5ae0ac)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>oachify</span>
+        </div>
         <button onClick={toggleTheme} className="p-2 rounded-full hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors focus:outline-none focus:ring-2 focus:ring-cyan-500">
           {theme === 'dark' ? <SunIcon className="w-5 h-5 text-yellow-400" /> : <MoonIcon className="w-5 h-5 text-slate-700" />}
         </button>
@@ -64,10 +69,10 @@ function App() {
           error={error}
           isGeneratingCode={isGeneratingCode}
         />
-        <ContextPanel 
+        <ContextPanel
           userGoal={userGoal}
           onGoalChange={setUserGoal}
-          isSessionActive={sessionState !== 'IDLE'} 
+          isSessionActive={sessionState !== 'IDLE'}
           screenCapture={screenCapture}
           isScreenSharingActive={isScreenSharingActive}
         />
