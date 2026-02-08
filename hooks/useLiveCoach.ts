@@ -1,30 +1,30 @@
 
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { GoogleGenAI, LiveSession, LiveServerMessage, Modality, Blob } from '@google/genai';
+import { GoogleGenAI, LiveServerMessage, Modality, Blob } from '@google/genai';
 import { SessionState, ChatMessage, CodeSnippet } from '../types';
 import { encode, decode, decodeAudioData } from '../services/audioService';
 
-const getSystemInstruction = (userGoal: string) => `You are Coachify, an AI coding mentor. Your responses are machine-parsed. Follow these rules.
+const getSystemInstruction = (userGoal: string) => `You are Coachify, an AI coding mentor. Your goal is to teach by guiding, not by giving away answers.
 
-**UNBREAKABLE RULE: CODE GENERATION**
-- If the user asks for code, you MUST NOT send the code in your response.
-- Instead, you MUST verbally confirm the request. Your verbal confirmation acts as a trigger for a separate tool to generate the code.
-- Example User Request: "Can you give me the boilerplate for an HTML file?"
-- Example **CORRECT** Verbal Response: "Certainly. I'll generate that HTML boilerplate and send it to the code window."
-- Example **INCORRECT** Response: (Sending audio and a text block with code). This will fail.
+**CODE GENERATION RULE (VERY IMPORTANT):**
+- When the user asks you to write or generate code, you MUST NOT write the code yourself.
+- Instead, you MUST confirm the request by including the exact phrase "CODE_REQUEST_CONFIRMED" in your spoken response. This phrase triggers a separate tool that generates the code.
+- Example User: "Give me the code for a login form."
+- Example You (CORRECT): "Okay, CODE_REQUEST_CONFIRMED. I'll get that login form code ready for you in the code panel."
+- Example You (INCORRECT): "Sure, here's the code: <form>..."
 
-**OTHER RULES:**
-- Any text part marked with \`"thought": true\` is for your internal reasoning ONLY. It will NOT be shown to the user.
-- Guide, don't just give answers. Use hints and leading questions.
-- The user's current goal is: "${userGoal}".`;
+**TEACHING STYLE:**
+- Ask leading questions.
+- Encourage the user to solve problems themselves.
+- Provide hints when they are stuck.
+- Be friendly, patient, and encouraging.
+
+**USER'S GOAL:**
+- The user wants to learn about: "${userGoal || "general programming concepts"}". Keep this goal in mind.`;
+
 
 const CODE_GENERATION_TRIGGERS = [
-    'i\'ll generate',
-    'generating the code',
-    'sent the code',
-    'sending the code',
-    'here is the code',
-    'code window'
+    'code_request_confirmed'
 ];
 
 const parseCoachTranscript = (fullTranscript: string): string => {
@@ -51,7 +51,7 @@ export const useLiveCoach = () => {
   const [isMuted, setIsMuted] = useState(false);
   const [isGeneratingCode, setIsGeneratingCode] = useState(false);
 
-  const sessionRef = useRef<LiveSession | null>(null);
+  const sessionRef = useRef<any | null>(null);
   const screenStreamRef = useRef<MediaStream | null>(null);
   const inputAudioContextRef = useRef<AudioContext | null>(null);
   const outputAudioContextRef = useRef<AudioContext | null>(null);
@@ -68,6 +68,7 @@ export const useLiveCoach = () => {
   const currentUserTurnText = useRef('');
   const currentCoachTurnText = useRef('');
   const isFetchingCodeRef = useRef(false);
+  const codeGenerationTriggeredRef = useRef(false);
 
   useEffect(() => {
     isScreenSharingActiveRef.current = isScreenSharingActive;
@@ -114,106 +115,48 @@ export const useLiveCoach = () => {
   }, [stopScreenShare]);
   
   const fetchCodeSnippet = useCallback(async (userPrompt: string) => {
-      if (isFetchingCodeRef.current || !userPrompt) return;
+      if (isFetchingCodeRef.current || !userPrompt.trim()) return;
       isFetchingCodeRef.current = true;
       setIsGeneratingCode(true);
       
       const goal = userGoalRef.current;
       console.log(`[fetchCodeSnippet] Triggered for prompt: "${userPrompt}" with goal: "${goal}"`);
       
-      const codeGenPrompt = `You are an expert coding coach helping users learn programming through hands-on practice.
+      const codeGenPrompt = `You are an expert code generation assistant. The user is learning to code with an AI mentor.
+Their overall goal is: "${goal}".
+Their immediate request is: "${userPrompt}".
 
-## Context
-- User's learning goal: ${goal || "Not specified yet"}
-- Current request: ${userPrompt || "User just started"}
-
-## Your Role
-You provide code snippets that help users progress toward their learning goal, one step at a time. You balance showing complete, working examples with leaving room for learning.
-
-## Instructions
-
-1. **Interpret the request:**
-   - If the user has no goal yet, ask them what they want to learn or build
-   - If they have a goal but no specific request, provide the logical first step (setup, boilerplate, or foundational code)
-   - For conversational prompts like "next", "continue", "send it", or "okay", provide the next incremental code piece
-   - For specific technical requests, provide targeted code that addresses their question while advancing their goal
-
-2. **Code quality:**
-   - Write clean, well-commented code that explains key concepts
-   - Use meaningful variable names that teach good practices
-   - Include inline comments for learning points (e.g., "// This loop iterates through each item")
-   - Follow language-specific best practices and conventions
-
-3. **Pedagogical approach:**
-   - Build incrementally - don't provide everything at once
-   - Each snippet should introduce 1-2 new concepts
-   - Include TODO comments where the user should practice or extend the code
-   - Add brief comments explaining "why" not just "what"
-
-4. **Response format:**
-   - If no goal is set: Respond conversationally asking what they want to learn
-   - If providing code: Give a one-sentence intro, then the code block, then 1-2 learning tips
-   - Always use proper markdown code fences with language specification
-
-## Example Outputs
-
-**No goal set:**
-"Hi! I'd love to help you learn to code. What would you like to build or learn? For example: a website, a Discord bot, data analysis with Python, or something else?"
-
-**With goal:**
-"Let's start with the basic Express server setup:
-
-\`\`\`javascript
-// Import the Express framework
-const express = require('express');
-const app = express();
-const PORT = 3000;
-
-// Middleware to parse JSON requests
-app.use(express.json());
-
-// Your first route - responds to GET requests at the root URL
-app.get('/', (req, res) => {
-  res.json({ message: 'Hello! Your server is running.' });
-});
-
-// TODO: Add your own routes here
-
-// Start the server
-app.listen(PORT, () => {
-  console.log(\`Server running on http://localhost:\${PORT}\`);
-});
-\`\`\`
-
-💡 **Try it:** Run this with \`node server.js\` and visit http://localhost:3000 in your browser.
-💡 **Next step:** We'll add a POST route to handle form submissions."`;
-
+Generate a clean, well-commented, and educational code snippet that directly addresses their request.
+- Prioritize clarity and best practices.
+- Add 1-2 comments explaining the "why" behind key parts of the code.
+- If appropriate, add a single TODO comment to suggest a next step or an improvement.
+- Provide only the raw code inside a single markdown block. Do not add any extra explanation before or after the code block.`;
 
       try {
         const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
         const response = await ai.models.generateContent({
-            model: 'gemini-3-flash-preview',
+            model: 'gemini-3-pro-preview',
             contents: codeGenPrompt,
         });
         
         const codeText = response.text;
         if (codeText) {
-             console.debug('[fetchCodeSnippet] Code snippet received:', codeText);
+             console.debug('[fetchCodeSnippet] Code snippet received');
              setCodeHistory(prev => [...prev, {
                 userPrompt: userPrompt.trim(),
                 code: codeText,
                 timestamp: new Date(),
             }]);
         } else {
-            console.error('[fetchCodeSnippet] Received an empty code response from generateContent.');
+            console.error('[fetchCodeSnippet] Received an empty code response');
         }
 
-      } catch (err) {
+      } catch (err: any) {
           console.error('[fetchCodeSnippet] Error fetching code snippet:', err);
+          setError(`Code generation failed: ${err.message}`);
       } finally {
           isFetchingCodeRef.current = false;
           setIsGeneratingCode(false);
-          lastUserPromptRef.current = ''; // Clear prompt after attempting to fetch
       }
   }, []);
 
@@ -278,6 +221,7 @@ app.listen(PORT, () => {
     setIsMuted(false);
     isNewUserTurnRef.current = true;
     userGoalRef.current = userGoal;
+    codeGenerationTriggeredRef.current = false;
 
     try {
       if (!process.env.API_KEY) {
@@ -367,9 +311,13 @@ app.listen(PORT, () => {
               const fullTranscript = currentCoachTurnText.current;
               const displayableText = parseCoachTranscript(fullTranscript);
 
+              // Check for code generation trigger
               const fullTextLower = fullTranscript.toLowerCase();
-              if (CODE_GENERATION_TRIGGERS.some(trigger => fullTextLower.includes(trigger))) {
-                  fetchCodeSnippet(lastUserPromptRef.current);
+              const shouldGenerateCode = CODE_GENERATION_TRIGGERS.some(trigger => fullTextLower.includes(trigger));
+              
+              if (shouldGenerateCode && !codeGenerationTriggeredRef.current && lastUserPromptRef.current.trim()) {
+                codeGenerationTriggeredRef.current = true;
+                fetchCodeSnippet(lastUserPromptRef.current);
               }
 
               setChatHistory(prev => {
@@ -393,8 +341,11 @@ app.listen(PORT, () => {
               if (currentCoachTurnText.current.trim()) {
                 console.debug("Coach's response:", currentCoachTurnText.current.trim());
               }
+              // Reset for next turn
               currentUserTurnText.current = '';
               currentCoachTurnText.current = '';
+              lastUserPromptRef.current = '';
+              codeGenerationTriggeredRef.current = false;
             }
 
             const base64Audio = message.serverContent?.modelTurn?.parts
