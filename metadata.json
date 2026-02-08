@@ -1,0 +1,8 @@
+{
+  "name": "Main Coachify 2 (save)",
+  "description": "A real-time AI coding coach that provides guidance by observing your screen, listening to your voice, and tracking your goals. It helps you learn and progress without giving away the answers directly.",
+  "requestFramePermissions": [
+    "microphone",
+    "display-capture"
+  ]
+}
