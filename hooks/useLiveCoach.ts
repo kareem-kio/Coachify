@@ -27,6 +27,20 @@ const CODE_GENERATION_TRIGGERS = [
     'code window'
 ];
 
+const parseCoachTranscript = (fullTranscript: string): string => {
+  const ctrlSequenceRegex = /<ctrl\d+>/;
+  const match = fullTranscript.match(ctrlSequenceRegex);
+  if (match && match.index !== undefined) {
+    return fullTranscript.substring(match.index + match[0].length);
+  }
+
+  if (fullTranscript.toLowerCase().trim().startsWith('thought')) {
+    return '';
+  }
+
+  return fullTranscript;
+};
+
 export const useLiveCoach = () => {
   const [sessionState, setSessionState] = useState<SessionState>(SessionState.IDLE);
   const [chatHistory, setChatHistory] = useState<ChatMessage[]>([]);
@@ -34,6 +48,8 @@ export const useLiveCoach = () => {
   const [error, setError] = useState<string | null>(null);
   const [screenCapture, setScreenCapture] = useState<string | null>(null);
   const [isScreenSharingActive, setIsScreenSharingActive] = useState(false);
+  const [isMuted, setIsMuted] = useState(false);
+  const [isGeneratingCode, setIsGeneratingCode] = useState(false);
 
   const sessionRef = useRef<LiveSession | null>(null);
   const screenStreamRef = useRef<MediaStream | null>(null);
@@ -48,6 +64,7 @@ export const useLiveCoach = () => {
   const lastUserPromptRef = useRef('');
   const userGoalRef = useRef('');
   const isScreenSharingActiveRef = useRef(isScreenSharingActive);
+  const isMutedRef = useRef(isMuted);
   const currentUserTurnText = useRef('');
   const currentCoachTurnText = useRef('');
   const isFetchingCodeRef = useRef(false);
@@ -55,6 +72,10 @@ export const useLiveCoach = () => {
   useEffect(() => {
     isScreenSharingActiveRef.current = isScreenSharingActive;
   }, [isScreenSharingActive]);
+
+  useEffect(() => {
+    isMutedRef.current = isMuted;
+  }, [isMuted]);
   
   const stopScreenShare = useCallback(() => {
     if (screenStreamRef.current) {
@@ -95,18 +116,77 @@ export const useLiveCoach = () => {
   const fetchCodeSnippet = useCallback(async (userPrompt: string) => {
       if (isFetchingCodeRef.current || !userPrompt) return;
       isFetchingCodeRef.current = true;
+      setIsGeneratingCode(true);
       
       const goal = userGoalRef.current;
       console.log(`[fetchCodeSnippet] Triggered for prompt: "${userPrompt}" with goal: "${goal}"`);
       
-      const codeGenPrompt = `You are an expert coding assistant.
-The user's overall goal is to: "${goal}".
-The user's most recent request was: "${userPrompt}".
+      const codeGenPrompt = `You are an expert coding coach helping users learn programming through hands-on practice.
 
-Based on their overall goal and this request, generate the next logical code snippet they would need. Interpret conversational requests like "send it", "give me the code", or "okay" as a prompt to provide the next piece of code for their main goal.
-If the user's request is very short or generic, provide the foundational starting code for their main goal (e.g., boilerplate, main function, basic server setup).
+## Context
+- User's learning goal: ${goal || "Not specified yet"}
+- Current request: ${userPrompt || "User just started"}
 
-Provide ONLY the raw code inside a single markdown block. Do not add any explanation or introductory text.`;
+## Your Role
+You provide code snippets that help users progress toward their learning goal, one step at a time. You balance showing complete, working examples with leaving room for learning.
+
+## Instructions
+
+1. **Interpret the request:**
+   - If the user has no goal yet, ask them what they want to learn or build
+   - If they have a goal but no specific request, provide the logical first step (setup, boilerplate, or foundational code)
+   - For conversational prompts like "next", "continue", "send it", or "okay", provide the next incremental code piece
+   - For specific technical requests, provide targeted code that addresses their question while advancing their goal
+
+2. **Code quality:**
+   - Write clean, well-commented code that explains key concepts
+   - Use meaningful variable names that teach good practices
+   - Include inline comments for learning points (e.g., "// This loop iterates through each item")
+   - Follow language-specific best practices and conventions
+
+3. **Pedagogical approach:**
+   - Build incrementally - don't provide everything at once
+   - Each snippet should introduce 1-2 new concepts
+   - Include TODO comments where the user should practice or extend the code
+   - Add brief comments explaining "why" not just "what"
+
+4. **Response format:**
+   - If no goal is set: Respond conversationally asking what they want to learn
+   - If providing code: Give a one-sentence intro, then the code block, then 1-2 learning tips
+   - Always use proper markdown code fences with language specification
+
+## Example Outputs
+
+**No goal set:**
+"Hi! I'd love to help you learn to code. What would you like to build or learn? For example: a website, a Discord bot, data analysis with Python, or something else?"
+
+**With goal:**
+"Let's start with the basic Express server setup:
+
+\`\`\`javascript
+// Import the Express framework
+const express = require('express');
+const app = express();
+const PORT = 3000;
+
+// Middleware to parse JSON requests
+app.use(express.json());
+
+// Your first route - responds to GET requests at the root URL
+app.get('/', (req, res) => {
+  res.json({ message: 'Hello! Your server is running.' });
+});
+
+// TODO: Add your own routes here
+
+// Start the server
+app.listen(PORT, () => {
+  console.log(\`Server running on http://localhost:\${PORT}\`);
+});
+\`\`\`
+
+💡 **Try it:** Run this with \`node server.js\` and visit http://localhost:3000 in your browser.
+💡 **Next step:** We'll add a POST route to handle form submissions."`;
 
 
       try {
@@ -132,6 +212,7 @@ Provide ONLY the raw code inside a single markdown block. Do not add any explana
           console.error('[fetchCodeSnippet] Error fetching code snippet:', err);
       } finally {
           isFetchingCodeRef.current = false;
+          setIsGeneratingCode(false);
           lastUserPromptRef.current = ''; // Clear prompt after attempting to fetch
       }
   }, []);
@@ -184,12 +265,17 @@ Provide ONLY the raw code inside a single markdown block. Do not add any explana
     }
   }, [stopScreenShare]);
 
+  const toggleMute = useCallback(() => {
+    setIsMuted(prev => !prev);
+  }, []);
+
   const startSession = useCallback(async (userGoal: string) => {
     setSessionState(SessionState.CONNECTING);
     setError(null);
     setChatHistory([]);
     setCodeHistory([]);
     setScreenCapture(null);
+    setIsMuted(false);
     isNewUserTurnRef.current = true;
     userGoalRef.current = userGoal;
 
@@ -223,6 +309,10 @@ Provide ONLY the raw code inside a single markdown block. Do not add any explana
             scriptProcessorRef.current = inputAudioContextRef.current!.createScriptProcessor(4096, 1, 1);
 
             scriptProcessorRef.current.onaudioprocess = (audioProcessingEvent) => {
+              if (isMutedRef.current) {
+                return;
+              }
+              
               const inputData = audioProcessingEvent.inputBuffer.getChannelData(0);
               let sum = 0.0;
               for (let i = 0; i < inputData.length; i++) {
@@ -274,8 +364,11 @@ Provide ONLY the raw code inside a single markdown block. Do not add any explana
               currentCoachTurnText.current += text;
               isNewUserTurnRef.current = true;
               
-              const fullText = (currentCoachTurnText.current).toLowerCase();
-              if (CODE_GENERATION_TRIGGERS.some(trigger => fullText.includes(trigger))) {
+              const fullTranscript = currentCoachTurnText.current;
+              const displayableText = parseCoachTranscript(fullTranscript);
+
+              const fullTextLower = fullTranscript.toLowerCase();
+              if (CODE_GENERATION_TRIGGERS.some(trigger => fullTextLower.includes(trigger))) {
                   fetchCodeSnippet(lastUserPromptRef.current);
               }
 
@@ -283,10 +376,13 @@ Provide ONLY the raw code inside a single markdown block. Do not add any explana
                 const last = prev[prev.length - 1];
                 if (last?.sender === 'coach') {
                   const newHistory = [...prev];
-                  newHistory[newHistory.length - 1] = { ...last, text: last.text + text };
+                  newHistory[newHistory.length - 1] = { ...last, text: displayableText };
                   return newHistory;
                 }
-                return [...prev, { sender: 'coach', text, timestamp: new Date() }];
+                if (displayableText.trim()) {
+                    return [...prev, { sender: 'coach', text: displayableText, timestamp: new Date() }];
+                }
+                return prev;
               });
             }
 
@@ -375,5 +471,8 @@ Provide ONLY the raw code inside a single markdown block. Do not add any explana
     stopScreenShare,
     isScreenSharingActive,
     screenCapture,
+    isMuted,
+    toggleMute,
+    isGeneratingCode,
   };
 };

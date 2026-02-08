@@ -12,9 +12,19 @@ interface ChatPanelProps {
   history: ChatMessage[];
   codeHistory: CodeSnippet[];
   error: string | null;
+  isGeneratingCode: boolean;
 }
 
-const StatusIndicator: React.FC<{ sessionState: SessionState }> = ({ sessionState }) => {
+const StatusIndicator: React.FC<{ sessionState: SessionState; isGeneratingCode: boolean }> = ({ sessionState, isGeneratingCode }) => {
+  if (isGeneratingCode) {
+    return (
+      <div className="flex items-center space-x-2 text-cyan-500 dark:text-cyan-400">
+        <LoadingIcon className="animate-spin h-5 w-5" />
+        <span>Generating Code...</span>
+      </div>
+    );
+  }
+  
   switch (sessionState) {
     case SessionState.CONNECTING:
       return (
@@ -122,7 +132,7 @@ const CodeView: React.FC<{ codeHistory: CodeSnippet[] }> = ({ codeHistory }) => 
   );
 }
 
-export const ChatPanel: React.FC<ChatPanelProps> = ({ sessionState, history, codeHistory, error }) => {
+export const ChatPanel: React.FC<ChatPanelProps> = ({ sessionState, history, codeHistory, error, isGeneratingCode }) => {
   const [activeTab, setActiveTab] = useState<'chat' | 'code'>('chat');
 
   return (
@@ -142,7 +152,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ sessionState, history, cod
                 <CodeIcon className="h-4 w-4" /> Code
             </button>
         </div>
-        <StatusIndicator sessionState={sessionState} />
+        <StatusIndicator sessionState={sessionState} isGeneratingCode={isGeneratingCode} />
       </div>
       
       {error ? (

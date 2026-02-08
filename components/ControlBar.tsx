@@ -5,6 +5,7 @@ import { MicIcon } from './icons/MicIcon';
 import { SquareIcon } from './icons/SquareIcon';
 import { CameraIcon } from './icons/CameraIcon';
 import { CameraOffIcon } from './icons/CameraOffIcon';
+import { MicOffIcon } from './icons/MicOffIcon';
 
 interface ControlBarProps {
   sessionState: SessionState;
@@ -13,6 +14,8 @@ interface ControlBarProps {
   onStartScreenShare: () => void;
   onStopScreenShare: () => void;
   isScreenSharingActive: boolean;
+  isMuted: boolean;
+  onToggleMute: () => void;
 }
 
 export const ControlBar: React.FC<ControlBarProps> = ({
@@ -22,6 +25,8 @@ export const ControlBar: React.FC<ControlBarProps> = ({
   onStartScreenShare,
   onStopScreenShare,
   isScreenSharingActive,
+  isMuted,
+  onToggleMute,
 }) => {
   const isSessionActive = sessionState === SessionState.ACTIVE;
   const isConnecting = sessionState === SessionState.CONNECTING;
@@ -54,27 +59,50 @@ export const ControlBar: React.FC<ControlBarProps> = ({
           <span>Start Coaching</span>
         </button>
       )}
+
       {isSessionActive && (
-        <button
-          onClick={handleShareClick}
-          className={`flex items-center justify-center w-48 h-12 px-6 font-semibold rounded-full shadow-lg transition-all duration-300 focus:outline-none focus:ring-4 ${
-            isScreenSharingActive
-              ? 'bg-orange-600 text-white hover:bg-orange-700 focus:ring-orange-400'
-              : 'bg-slate-200 text-slate-800 hover:bg-slate-300 focus:ring-slate-400 dark:bg-slate-600 dark:text-white dark:hover:bg-slate-700 dark:focus:ring-slate-500'
-          }`}
-        >
-          {isScreenSharingActive ? (
-            <>
-              <CameraOffIcon className="h-5 w-5 mr-2" />
-              <span>Stop Sharing</span>
-            </>
-          ) : (
-            <>
-              <CameraIcon className="h-5 w-5 mr-2" />
-              <span>Share Screen</span>
-            </>
-          )}
-        </button>
+        <>
+          <button
+            onClick={onToggleMute}
+            className={`flex items-center justify-center w-48 h-12 px-6 font-semibold rounded-full shadow-lg transition-all duration-300 focus:outline-none focus:ring-4 ${
+              isMuted
+                ? 'bg-yellow-500 text-white hover:bg-yellow-600 focus:ring-yellow-300'
+                : 'bg-slate-200 text-slate-800 hover:bg-slate-300 focus:ring-slate-400 dark:bg-slate-600 dark:text-white dark:hover:bg-slate-700 dark:focus:ring-slate-500'
+            }`}
+          >
+            {isMuted ? (
+              <>
+                <MicOffIcon className="h-5 w-5 mr-2" />
+                <span>Unmute</span>
+              </>
+            ) : (
+              <>
+                <MicIcon className="h-5 w-5 mr-2" />
+                <span>Mute</span>
+              </>
+            )}
+          </button>
+          <button
+            onClick={handleShareClick}
+            className={`flex items-center justify-center w-48 h-12 px-6 font-semibold rounded-full shadow-lg transition-all duration-300 focus:outline-none focus:ring-4 ${
+              isScreenSharingActive
+                ? 'bg-orange-600 text-white hover:bg-orange-700 focus:ring-orange-400'
+                : 'bg-slate-200 text-slate-800 hover:bg-slate-300 focus:ring-slate-400 dark:bg-slate-600 dark:text-white dark:hover:bg-slate-700 dark:focus:ring-slate-500'
+            }`}
+          >
+            {isScreenSharingActive ? (
+              <>
+                <CameraOffIcon className="h-5 w-5 mr-2" />
+                <span>Stop Sharing</span>
+              </>
+            ) : (
+              <>
+                <CameraIcon className="h-5 w-5 mr-2" />
+                <span>Share Screen</span>
+              </>
+            )}
+          </button>
+        </>
       )}
     </div>
   );

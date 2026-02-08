@@ -21,6 +21,9 @@ function App() {
     stopScreenShare,
     isScreenSharingActive,
     screenCapture,
+    isMuted,
+    toggleMute,
+    isGeneratingCode,
   } = useLiveCoach();
 
   useEffect(() => {
@@ -59,6 +62,7 @@ function App() {
           history={chatHistory}
           codeHistory={codeHistory}
           error={error}
+          isGeneratingCode={isGeneratingCode}
         />
         <ContextPanel 
           userGoal={userGoal}
@@ -77,6 +81,8 @@ function App() {
           onStartScreenShare={startScreenShare}
           onStopScreenShare={stopScreenShare}
           isScreenSharingActive={isScreenSharingActive}
+          isMuted={isMuted}
+          onToggleMute={toggleMute}
         />
       </footer>
     </div>
