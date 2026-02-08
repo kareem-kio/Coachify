@@ -135,7 +135,7 @@ Generate a clean, well-commented, and educational code snippet that directly add
       try {
         const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
         const response = await ai.models.generateContent({
-            model: 'gemini-3-pro-preview',
+            model: 'gemini-3-flash-preview',
             contents: codeGenPrompt,
         });
         
