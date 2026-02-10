@@ -1,6 +1,3 @@
-<div align="center">
-<img width="1200" height="475" alt="Coachify Banner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-
 # 🎯 Coachify
 
 **Your AI-Powered Real-Time Assistant**
@@ -8,6 +5,7 @@
 *Talk, share your screen, and get intelligent guidance on anything*
 
 [![React](https://img.shields.io/badge/React-19.2-61DAFB?logo=react&logoColor=white)](https://reactjs.org/)
+[![Gemini](https://img.shields.io/badge/Gemini-3-4285F4?logo=google&logoColor=white)](https://ai.google.dev/)
 [![Gemini](https://img.shields.io/badge/Gemini-2.5_Flash-4285F4?logo=google&logoColor=white)](https://ai.google.dev/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.8-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![Vite](https://img.shields.io/badge/Vite-6.2-646CFF?logo=vite&logoColor=white)](https://vitejs.dev/)
@@ -45,7 +43,9 @@ Coachify is a **real-time AI assistant** powered by Google's Gemini 2.5 Flash wi
 ## 🛠️ Tech Stack
 
 - **Frontend:** React 19 + TypeScript
-- **AI Engine:** Google Gemini 2.5 Flash (Native Audio)
+- **AI Engine:** 
+  - **Code Generation:** Google Gemini 3 (Text/Code)
+  - **Audio Capture:** Google Gemini 2.5 Flash
 - **Build Tool:** Vite 6
 - **Styling:** Tailwind CSS
 - **Audio:** Web Audio API with PCM streaming
@@ -127,7 +127,27 @@ Set a learning goal at the start of your session, and the AI tailors its respons
 
 ## 📜 License
 
-MIT License — feel free to use, modify, and distribute!
+MIT License
+
+Copyright (c) 2026 Coachify Team
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
 
 ---
 
